@@ -1,5 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = {
     target: 'web',
@@ -9,7 +10,10 @@ module.exports = {
         path: path.resolve(__dirname, './dist'),
     },
     resolve: {
-        extensions: ['.ts', '.tsx', '.js', '.jsx']
+        extensions: ['.ts', '.tsx', '.js', '.jsx'],
+        alias: {
+            'globals': path.resolve(__dirname, './src/global')
+        }
     },
     devtool: process.env.NODE_ENV === 'production' ? false : 'inline-source-map',
     module: {
@@ -40,6 +44,9 @@ module.exports = {
             }]
     },
     plugins: [
+        new webpack.ProvidePlugin({
+            'globals': 'globals'
+        }),
         new HtmlWebpackPlugin({
             title: 'room viewer',
             filename: 'index.html',

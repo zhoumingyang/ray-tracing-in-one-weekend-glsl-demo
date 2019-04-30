@@ -27,5 +27,43 @@ export const Util = {
         if (err !== gl.NO_ERROR) {
             console.log(err);
         }
+    },
+
+    parseUniformSource: (sourceString: string, result: Map<string, string>): Map<string, string> => {
+        const uniform: string = 'uniform';
+        const arrayLeftSymbol: string = "[";
+        const arrayRightSymbol: string = "]";
+        const space: string = " ";
+        const semicolon: string = ";";
+        const equal: string = "=";
+        while (sourceString && sourceString.indexOf(uniform) !== -1) {
+            const uniformPos: number = sourceString.indexOf(uniform);
+            sourceString = sourceString.substr(uniformPos);
+            const semicolonPos: number = sourceString.indexOf(semicolon);
+            if (semicolonPos !== -1) {
+                const tmpDefineStr = sourceString.substr(0, semicolonPos);
+                const splitResult = tmpDefineStr.split(space);
+                if (splitResult.length >= 3) {
+                    const typeStr: string = splitResult[1];
+                    const varDefineStr: string = splitResult[2];
+                    if (tmpDefineStr.includes(arrayLeftSymbol) && tmpDefineStr.includes(arrayRightSymbol)) {
+                        const leftPos: number = varDefineStr.indexOf(arrayLeftSymbol);
+                        const rightPos: number = varDefineStr.indexOf(arrayRightSymbol);
+                        if (leftPos !== -1 && rightPos !== -1) {
+                            const numStr: string = varDefineStr.substr(leftPos, rightPos);
+                            const varName: string = varDefineStr.substr(0, leftPos);
+                            const num: number = parseInt(numStr);
+                            for (let i = 0; i < num; i++) {
+                                result.set(`${varName}[${i}]`, typeStr);
+                            }
+                        }
+                    } else {
+                        result.set(varDefineStr, typeStr);
+                    }
+                }
+                sourceString = sourceString.substr(semicolonPos + 1);
+            }
+        }
+        return result;
     }
 };
