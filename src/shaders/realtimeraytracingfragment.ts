@@ -1,5 +1,6 @@
 import { UniformDefines } from './chunk/uniformdefines';
 import { RandomFunction } from './chunk/randomfunction';
+import { Texture } from './chunk/texture';
 import { Material } from './chunk/material';
 import { HitRecord } from './chunk/hitrecord';
 import { Ray } from './chunk/ray';
@@ -17,6 +18,7 @@ export const realTimeRayTracingFragmentSource: string =
     ${RandomFunction.random_in_unit_sphere}
     ${Refract.schlick}
     ${Refract.doRefract}
+    ${Texture.texture}
     ${Material.traceMaterial}
     ${Material.createMaterial}
     ${HitRecord.hitRecord}

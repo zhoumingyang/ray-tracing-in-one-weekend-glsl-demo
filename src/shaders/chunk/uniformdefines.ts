@@ -21,6 +21,8 @@ const traceFragmentUniformDefines: string =
     #define PI 3.14159265358979323
     #define TWO_PI 6.28318530717958648
     #define FOUR_PI 12.5663706143591729
+    #define CONSTANT_TEXTURE 0
+    #define CHECKER_TEXTURE 1
     #define DIFFUSE 0
     #define LAMBERTIAN 1
     #define METAL 2

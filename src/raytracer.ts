@@ -3,6 +3,7 @@ import { Util } from './util';
 import { vec3 } from './math/vec';
 import { Camera } from './camera';
 import { Shader } from './shader';
+import { Texture } from './texture';
 import { Material } from './material';
 import { Sphere } from './sphere';
 import { renderVertexSource } from './shaders/rendervertex';
@@ -100,38 +101,50 @@ export class RayTracer {
     }
 
     public initScene(): void {
+        const black = new vec3(0.0, 0.0, 0.0);
+        const white = new vec3(1.0, 1.0, 1.0);
         let i: number = 1;
+        let texture = new Texture(black, new vec3(0.2, 0.3, 0.1), new vec3(0.9, 0.9, 0.9), globals.TEXTURETYPE.CHECKER_TEXTURE);
         this.spheres[0] = new Sphere(new vec3(0.0, -1000.0, 0.0), 1000.0,
-            new Material(new vec3(0.5, 0.5, 0.5), 0.0, 1.0, globals.MATERIALTYPE.LAMBERTIAN));
+            new Material(texture, 0.0, 1.0, globals.MATERIALTYPE.LAMBERTIAN));
         this.spheres[0].setUniformValue(this.traceUniformValue, 0);
-        for (let a = -3; a < 3; a++) {
-            for (let b = -3; b < 3; b++) {
+        for (let a = -5; a < 5; a++) {
+            for (let b = -4; b < 4; b++) {
                 const chooseMat: number = Util.random();
                 const center: vec3 = new vec3(a + 0.9 * Util.random(), 0.2, b + 0.9 * Util.random());
                 const std: vec3 = new vec3(4.0, 0.2, 0.0);
                 if (center.distanceTo(std) > 0.9) {
                     if (chooseMat < 0.8) {
                         let sa: vec3 = new vec3(Util.random() * Util.random(), Util.random() * Util.random(), Util.random() * Util.random());
-                        this.spheres[i++] = new Sphere(center, 0.2, new Material(sa, 0.0, 1.0, globals.MATERIALTYPE.LAMBERTIAN));
+                        texture = new Texture(sa, black, black, globals.TEXTURETYPE.CONSTANT_TEXTURE);
+                        this.spheres[i++] = new Sphere(center, 0.2, new Material(texture, 0.0, 1.0, globals.MATERIALTYPE.LAMBERTIAN));
                         this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
                     } else if (chooseMat < 0.95) {
                         let sa: vec3 = new vec3(0.5 * (1.0 + Util.random()), 0.5 * (1.0 + Util.random()), 0.5 * (1.0 + Util.random()));
+                        texture = new Texture(sa, black, black, globals.TEXTURETYPE.CONSTANT_TEXTURE);
                         let f: number = 0.5 * Util.random();
-                        this.spheres[i++] = new Sphere(center, 0.2, new Material(sa, f, 1.0, globals.MATERIALTYPE.METAL));
+                        this.spheres[i++] = new Sphere(center, 0.2, new Material(texture, f, 1.0, globals.MATERIALTYPE.METAL));
                         this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
                     } else {
-                        this.spheres[i++] = new Sphere(center, 0.2, new Material(new vec3(0.0, 0.0, 0.0), 0.0, 1.5, globals.MATERIALTYPE.DIELECTRIC));
+                        texture = new Texture(black, black, black, globals.TEXTURETYPE.CONSTANT_TEXTURE);
+                        this.spheres[i++] = new Sphere(center, 0.2, new Material(texture, 0.0, 1.5, globals.MATERIALTYPE.DIELECTRIC));
                         this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
                     }
                 }
             }
         }
-        this.spheres[i++] = new Sphere(new vec3(0.0, 1.0, 0.0), 1.0, new Material(new vec3(0.0, 0.0, 0.0), 0.0, 1.5, globals.MATERIALTYPE.DIELECTRIC));
+        texture = new Texture(black, black, black, globals.TEXTURETYPE.CONSTANT_TEXTURE);
+        this.spheres[i++] = new Sphere(new vec3(0.0, 1.0, 0.0), 1.0, new Material(texture, 0.0, 1.5, globals.MATERIALTYPE.DIELECTRIC));
         this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
-        this.spheres[i++] = new Sphere(new vec3(-4.0, 1.0, 0.0), 1.0, new Material(new vec3(0.4, 0.2, 0.1), 0.0, 1.0, globals.MATERIALTYPE.LAMBERTIAN));
+
+        texture = new Texture(new vec3(0.4, 0.2, 0.1), black, black, globals.TEXTURETYPE.CONSTANT_TEXTURE);
+        this.spheres[i++] = new Sphere(new vec3(-4.0, 1.0, 0.0), 1.0, new Material(texture, 0.0, 1.0, globals.MATERIALTYPE.LAMBERTIAN));
         this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
-        this.spheres[i++] = new Sphere(new vec3(4.0, 1.0, 0.0), 1.0, new Material(new vec3(1.0, 1.0, 1.0), 0.0, 1.0, globals.MATERIALTYPE.METAL));
+
+        texture = new Texture(white, black, black, globals.TEXTURETYPE.CONSTANT_TEXTURE);
+        this.spheres[i++] = new Sphere(new vec3(4.0, 1.0, 0.0), 1.0, new Material(texture, 0.0, 1.0, globals.MATERIALTYPE.METAL));
         this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
+
         this.sphereCount = i;
         this.traceUniformValue.set('sphereCount', this.sphereCount);
     }

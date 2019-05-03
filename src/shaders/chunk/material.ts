@@ -1,21 +1,30 @@
 const traceMaterial: string =
     `struct Material {
-        vec3 albedo;
+        Texture texture;
         float fuzz;
         float refIdx;
         int type;
     };`;
 
 const createMaterial: string =
-    `Material creatMaterial(vec3 albedo, float fuzz, float refIdx, int type) {
-        return Material(albedo, fuzz, refIdx, type);
+    `Material creatMaterial(Texture texture, float fuzz, float refIdx, int type) {
+        return Material(texture, fuzz, refIdx, type);
     }`;
 
 const lambetianScatter: string =
     `bool lambetianScatter(in Ray inRay, hitRecord rec, out vec3 attenuation, out Ray outRay, Material mat) {
         vec3 target = rec.p + rec.normal + random_in_unit_sphere(rec.p);
         outRay = Ray(rec.p, target - rec.p);
-        attenuation = mat.albedo;
+        if (mat.texture.type == CHECKER_TEXTURE) {
+            float sines = sin(10.0 * rec.p.x) * sin(10.0 * rec.p.y) * sin(10.0 * rec.p.z);
+            if (sines < 0.0) {
+                attenuation = mat.texture.oddColor;
+            } else {
+                attenuation = mat.texture.evenColor;
+            }
+        } else {
+            attenuation = mat.texture.color;
+        }
         return true;
     }`;
 
@@ -23,7 +32,7 @@ const metalScatter: string =
     `bool metalScatter(in Ray inRay, hitRecord rec, out vec3 attenuation, out Ray outRay, Material mat) {
         vec3 reflected = reflect(normalize(inRay.direction), rec.normal);
         outRay = Ray(rec.p, reflected + mat.fuzz * random_in_unit_sphere(rec.p));
-        attenuation = mat.albedo;
+        attenuation = mat.texture.color;
         return (dot(outRay.direction, rec.normal) > 0.0);
     }`;
 

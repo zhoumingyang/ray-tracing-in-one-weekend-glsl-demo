@@ -15,7 +15,10 @@ export class Sphere {
     setUniformValue(uniformValue: Map<string, any>, idx: number = 0): void {
         uniformValue.set(`spheres[${idx}].center`, this.center);
         uniformValue.set(`spheres[${idx}].radius`, this.radius);
-        uniformValue.set(`spheres[${idx}].material.albedo`, this.material.albedo);
+        uniformValue.set(`spheres[${idx}].material.texture.color`, this.material.texture.color);
+        uniformValue.set(`spheres[${idx}].material.texture.oddColor`, this.material.texture.oddColor);
+        uniformValue.set(`spheres[${idx}].material.texture.evenColor`, this.material.texture.evenColor);
+        uniformValue.set(`spheres[${idx}].material.texture.type`, this.material.texture.type);
         uniformValue.set(`spheres[${idx}].material.fuzz`, this.material.fuzz);
         uniformValue.set(`spheres[${idx}].material.refIdx`, this.material.refIdx);
         uniformValue.set(`spheres[${idx}].material.type`, this.material.type);
