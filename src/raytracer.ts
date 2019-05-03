@@ -1,6 +1,8 @@
 import { globals } from './global';
 import { Util } from './util';
-import { vec3 } from './math/vec';
+import { vec3, vec4 } from './math/vec';
+import { mat4 } from './math/mat4';
+import { Ray } from './math/ray';
 import { Camera } from './camera';
 import { Shader } from './shader';
 import { Texture } from './texture';
@@ -55,6 +57,39 @@ export class RayTracer {
         this.initScene();
         this.initScreenRenderShader();
         this.initTraceRenderShader();
+        this.gl.canvas.addEventListener('click', this.onMouseClick.bind(this), false);
+    }
+
+    private onMouseClick(event: any): void {
+        //viewport space to ndc space;
+        let nx: number = (2.0 * event.clientX) / globals.CANVAS_WIDTH - 1.0;
+        let ny: number = 1.0 - (2.0 * event.clientY) / globals.CANVAS_HEIGHT;
+        let nz: number = 1.0;
+        const verNdc: vec3 = new vec3(nx, ny, nz);
+
+        const verClip: vec4 = new vec4(verNdc.x, verNdc.y, -1.0, 1.0);
+
+        // clip space to eye space
+        const projectMat4: mat4 = this.camera.projectMatrix;
+        const inverseProjectMat4: mat4 = new mat4().inverse(projectMat4);
+        let verEye: vec4 = inverseProjectMat4.multiplyVec4(verClip);
+        verEye = new vec4(verEye.x, verEye.y, -1.0, 0.0);
+
+        // eye space to world space
+        const viewMat4: mat4 = this.camera.viewMatrix;
+        const inverseViewMat4: mat4 = new mat4().inverse(viewMat4);
+        let verWorld = inverseViewMat4.multiplyVec4(verEye);
+        verWorld.normalize();
+        const rayDir: vec3 = new vec3(verWorld.x, verWorld.y, verWorld.z);
+
+        const ray: Ray = new Ray(this.camera.lookFrom, rayDir);
+        const hitSpheres: Sphere[] = [];
+        this.spheres.forEach((sphere: Sphere) => {
+            if (ray.hitSphere(sphere)) {
+                hitSpheres.push(sphere);
+            }
+        });
+        console.log(hitSpheres)
     }
 
     public initCamera() {
@@ -66,13 +101,7 @@ export class RayTracer {
         const aperture: number = 0.1;
         const focusDist: number = 10.0;
         this.camera = new Camera(lookat, lookfrom, up, fov, aspect, aperture, focusDist);
-        this.traceUniformValue.set('lookat', this.camera.lookAt);
-        this.traceUniformValue.set('lookfrom', this.camera.lookFrom);
-        this.traceUniformValue.set('up', this.camera.up);
-        this.traceUniformValue.set('fov', this.camera.fov);
-        this.traceUniformValue.set('aspect', this.camera.aspect);
-        this.traceUniformValue.set('aperture', this.camera.aperture);
-        this.traceUniformValue.set('focusDist', this.camera.focusDist);
+        this.camera.setUniformValue(this.traceUniformValue);
     }
 
     public initBufferData() {

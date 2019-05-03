@@ -21,7 +21,6 @@ export class Shader {
         this.program = Util.compileShader(gl, vertexSource, fragmentSource);
         this.uniformVar = Util.parseUniformSource(vertexSource, this.uniformVar);
         this.uniformVar = Util.parseUniformSource(fragmentSource, this.uniformVar);
-        console.log(this.uniformVar);
     }
 
     public initUniform(uniformValue?: Map<string, any>): void {

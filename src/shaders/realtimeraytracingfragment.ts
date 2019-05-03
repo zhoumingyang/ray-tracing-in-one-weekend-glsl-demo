@@ -39,7 +39,7 @@ export const realTimeRayTracingFragmentSource: string =
         hitRecord tmpRec;
         float attenuation = 1.0;
         vec3 totalAttenuation = vec3(1.0, 1.0, 1.0);
-        for(int bounces = 0; bounces < 4; bounces++) {
+        for(int bounces = 0; bounces < 6; bounces++) {
             if(hitSpheres(r, tmpRec)) {
                 vec3 tmpAttenuation;
                 Ray outRay;
