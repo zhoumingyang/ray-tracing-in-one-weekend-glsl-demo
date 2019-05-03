@@ -37,7 +37,7 @@ const hitSpheres: string =
     `bool hitSpheres(Ray r, inout hitRecord rec) {
         bool hitAnything = false;
         float closet = MAXFLOATNUM;
-        for(int i = 0; i < sphereCount; i++) {
+        for(int i = 0; i < sphereNumber; i++) {
             if(hitSphere(r, spheres[i], 0.001, closet, rec)) {
                 hitAnything = true;
                 closet = rec.t;

@@ -7,7 +7,7 @@ import { Sphere } from './chunk/sphere';
 import { Camera } from './chunk/camera';
 import { Refract } from './chunk/refract';
 
-export const realTimeRayTracingFragmentSource: string =
+export const bvhRayTraceFragmentSource: string =
     `#version 300 es
     precision highp float;
     precision highp int;

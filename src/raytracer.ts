@@ -1,24 +1,31 @@
-import { Util } from './util';
 import { globals } from './global';
-import { UniformInfo } from './interface';
+import { Util } from './util';
+import { vec3 } from './math/vec';
 import { Camera } from './camera';
+import { Shader } from './shader';
+import { Material } from './material';
+import { Sphere } from './sphere';
 import { renderVertexSource } from './shaders/rendervertex';
 import { renderFragmentSource } from './shaders/renderfragment';
 import { realTimeRayTracingVertexSource } from './shaders/realtimeraytracingvertex';
 import { realTimeRayTracingFragmentSource } from './shaders/realtimeraytracingfragment';
+import { bvhRayTraceVertexSource } from './shaders/bvhraytracevertex';
+import { bvhRayTraceFragmentSource } from './shaders/bvhraytracefragment';
 
 export class RayTracer {
     public gl: WebGLRenderingContext;
     public frameBuffer: any;
     public vertexBuffer: WebGLBuffer;
     public textures: WebGLTexture[];
-    public renderProgram: WebGLProgram;
-    public traceProgram: WebGLProgram;
+    public renderShader: Shader;
+    public traceShader: Shader;
     public screenAttribute: number;
     public traceAttribute: number;
-    public traceUniformInfoMap: Map<string, UniformInfo>;
     public traceUniformValue: Map<string, any>;
     public camera: Camera;
+    public samples: number;
+    public sphereCount: number;
+    public spheres: Sphere[];
     private vertices: number[];
 
     constructor(gl: WebGLRenderingContext) {
@@ -30,25 +37,29 @@ export class RayTracer {
             +2, +1];
         this.screenAttribute = 0;
         this.traceAttribute = 0;
-        this.traceUniformInfoMap = new Map();
+        this.samples = 1;
+        this.spheres = [];
+        this.sphereCount = 0;
         this.traceUniformValue = new Map();
     }
 
     public init() {
         this.traceUniformValue.set('clientWidth', globals.CANVAS_WIDTH);
         this.traceUniformValue.set('clientHeight', globals.CANVAS_HEIGHT);
+        this.traceUniformValue.set('samples', this.samples);
         this.initCamera();
         this.initBufferData();
         this.frameBuffer = this.gl.createFramebuffer();
         this.initTextures();
-        this.initScreenRenderProgram();
-        this.initTraceRenderProgram();
+        this.initScene();
+        this.initScreenRenderShader();
+        this.initTraceRenderShader();
     }
 
     public initCamera() {
-        const lookat: number[] = [0.0, 0.0, 0.0];
-        const lookfrom: number[] = [13.0, 2.0, 3.0];
-        const up: number[] = [0.0, 1.0, 0.0];
+        const lookat: vec3 = new vec3(0.0, 0.0, 0.0);
+        const lookfrom: vec3 = new vec3(13.0, 2.0, 3.0);
+        const up: vec3 = new vec3(0.0, 1.0, 0.0);
         const fov: number = 20.0;
         const aspect: number = globals.CANVAS_WIDTH / globals.CANVAS_HEIGH;
         const aperture: number = 0.1;
@@ -88,69 +99,62 @@ export class RayTracer {
         Util.errorCheck(this.gl);
     }
 
-    public initScreenRenderProgram(): void {
-        this.renderProgram = Util.compileShader(this.gl, renderVertexSource, renderFragmentSource);
+    public initScene(): void {
+        let i: number = 1;
+        this.spheres[0] = new Sphere(new vec3(0.0, -1000.0, 0.0), 1000.0,
+            new Material(new vec3(0.5, 0.5, 0.5), 0.0, 1.0, globals.MATERIALTYPE.LAMBERTIAN));
+        this.spheres[0].setUniformValue(this.traceUniformValue, 0);
+        for (let a = -3; a < 3; a++) {
+            for (let b = -3; b < 3; b++) {
+                const chooseMat: number = Util.random();
+                const center: vec3 = new vec3(a + 0.9 * Util.random(), 0.2, b + 0.9 * Util.random());
+                const std: vec3 = new vec3(4.0, 0.2, 0.0);
+                if (center.distanceTo(std) > 0.9) {
+                    if (chooseMat < 0.8) {
+                        let sa: vec3 = new vec3(Util.random() * Util.random(), Util.random() * Util.random(), Util.random() * Util.random());
+                        this.spheres[i++] = new Sphere(center, 0.2, new Material(sa, 0.0, 1.0, globals.MATERIALTYPE.LAMBERTIAN));
+                        this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
+                    } else if (chooseMat < 0.95) {
+                        let sa: vec3 = new vec3(0.5 * (1.0 + Util.random()), 0.5 * (1.0 + Util.random()), 0.5 * (1.0 + Util.random()));
+                        let f: number = 0.5 * Util.random();
+                        this.spheres[i++] = new Sphere(center, 0.2, new Material(sa, f, 1.0, globals.MATERIALTYPE.METAL));
+                        this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
+                    } else {
+                        this.spheres[i++] = new Sphere(center, 0.2, new Material(new vec3(0.0, 0.0, 0.0), 0.0, 1.5, globals.MATERIALTYPE.DIELECTRIC));
+                        this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
+                    }
+                }
+            }
+        }
+        this.spheres[i++] = new Sphere(new vec3(0.0, 1.0, 0.0), 1.0, new Material(new vec3(0.0, 0.0, 0.0), 0.0, 1.5, globals.MATERIALTYPE.DIELECTRIC));
+        this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
+        this.spheres[i++] = new Sphere(new vec3(-4.0, 1.0, 0.0), 1.0, new Material(new vec3(0.4, 0.2, 0.1), 0.0, 1.0, globals.MATERIALTYPE.LAMBERTIAN));
+        this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
+        this.spheres[i++] = new Sphere(new vec3(4.0, 1.0, 0.0), 1.0, new Material(new vec3(1.0, 1.0, 1.0), 0.0, 1.0, globals.MATERIALTYPE.METAL));
+        this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
+        this.sphereCount = i;
+        this.traceUniformValue.set('sphereCount', this.sphereCount);
+    }
+
+    public initScreenRenderShader(): void {
+        this.renderShader = new Shader(this.gl, renderVertexSource, renderFragmentSource);
         this.gl.enableVertexAttribArray(this.screenAttribute);
         Util.errorCheck(this.gl);
     }
 
-    private initTRPUniform(uniformVar?: Map<string, string>, vertexSource?: string, fragmentSource?: string): void {
-        if (!this.traceProgram && vertexSource && fragmentSource) {
-            this.traceProgram = Util.compileShader(this.gl, vertexSource, fragmentSource);
-        }
-        if (!this.traceProgram) {
-            return;
-        }
-        uniformVar.forEach((type, name) => {
-            const pos: WebGLUniformLocation = this.gl.getUniformLocation(this.traceProgram, name);
-            const value = this.traceUniformValue.get(name);
-            if (value) {
-                this.traceUniformInfoMap.set(name, { type: type, value: value, location: pos })
-            }
-        });
-    }
-
-    public initTraceRenderProgram(): void {
+    public initTraceRenderShader(): void {
         // real time render
-        this.traceProgram = Util.compileShader(this.gl, realTimeRayTracingVertexSource, realTimeRayTracingFragmentSource);
-        let result: Map<string, string> = new Map();
-        result = Util.parseUniformSource(realTimeRayTracingVertexSource, result);
-        result = Util.parseUniformSource(realTimeRayTracingFragmentSource, result);
-        this.initTRPUniform(result, realTimeRayTracingVertexSource, realTimeRayTracingFragmentSource);
+        this.traceShader = new Shader(this.gl, realTimeRayTracingVertexSource, realTimeRayTracingFragmentSource);
+        this.traceShader.initUniform(this.traceUniformValue);
         this.gl.enableVertexAttribArray(this.traceAttribute);
         Util.errorCheck(this.gl);
     }
 
-    private setTraceRenderProgramUniform(): void {
-        this.traceUniformInfoMap.forEach((info: any, name: string) => {
-            const ctype: string = info.type;
-            switch (ctype) {
-                case 'int':
-                    this.gl.uniform1i(info.location, info.value);
-                    break;
-                case 'float':
-                    this.gl.uniform1f(info.location, info.value);
-                    break;
-                case 'vec3':
-                    if (info.value instanceof Array) {
-                        this.gl.uniform3fv(info.location, new Float32Array(info.value));
-                    }
-                    break;
-                case 'vec4':
-                    if (info.value instanceof Array) {
-                        this.gl.uniform4fv(info.location, new Float32Array(info.value));
-                    }
-                    break;
-                default:
-                    break;
-            }
-        });
-    }
-
     public renderRayTracing(): void {
         //do ray tracing render
-        this.gl.useProgram(this.traceProgram);
-        this.setTraceRenderProgramUniform();
+        this.traceShader.startProgram();
+        this.traceShader.updateUniformValue('samples', this.samples);
+        this.traceShader.setUniform();
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures[0]);
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.frameBuffer);
@@ -159,12 +163,13 @@ export class RayTracer {
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
         this.textures.reverse();
+        this.samples++;
         Util.errorCheck(this.gl);
     }
 
     public renderScreen(): void {
         //do render to screen
-        this.gl.useProgram(this.renderProgram);
+        this.renderShader.startProgram();
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures[0]);
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
         this.gl.vertexAttribPointer(this.screenAttribute, 2, this.gl.FLOAT, false, 0, 0);

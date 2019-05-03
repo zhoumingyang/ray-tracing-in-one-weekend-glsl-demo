@@ -13,6 +13,9 @@ const traceFragmentUniformDefines: string =
     uniform float aspect;
     uniform float aperture;
     uniform float focusDist;
+    uniform int samples;
+    int sphereNumber;
+    #define MAXSPHERENUM 100
     #define SPHERENUM 100
     #define MAXFLOATNUM 3.402823e+38 //C++ FLT_MAX
     #define PI 3.14159265358979323

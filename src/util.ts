@@ -1,3 +1,5 @@
+import { globals } from './global';
+
 export const Util = {
     compileSource: (gl: WebGLRenderingContext, shaderSource: string, type: number): WebGLShader => {
         const shader: WebGLShader = gl.createShader(type);
@@ -52,9 +54,18 @@ export const Util = {
                         if (leftPos !== -1 && rightPos !== -1) {
                             const numStr: string = varDefineStr.substr(leftPos, rightPos);
                             const varName: string = varDefineStr.substr(0, leftPos);
-                            const num: number = parseInt(numStr);
-                            for (let i = 0; i < num; i++) {
-                                result.set(`${varName}[${i}]`, typeStr);
+                            const num: number = parseInt(globals.TRACESHADERDEFINE[numStr] || numStr) || 100;
+                            if (globals.STRUCTUNIFORMDEFINE[typeStr]) {
+                                const tmp = globals.STRUCTUNIFORMDEFINE[typeStr];
+                                for (let i = 0; i < num; i++) {
+                                    for (let key in tmp) {
+                                        result.set(`${varName}[${i}].${key}`, tmp[key]);
+                                    }
+                                }
+                            } else {
+                                for (let i = 0; i < num; i++) {
+                                    result.set(`${varName}[${i}]`, typeStr);
+                                }
                             }
                         }
                     } else {
@@ -65,5 +76,9 @@ export const Util = {
             }
         }
         return result;
+    },
+
+    random: (): number => {
+        return Math.round(Math.random());
     }
 };
