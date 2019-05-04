@@ -14,6 +14,7 @@ const traceFragmentUniformDefines: string =
     uniform float aperture;
     uniform float focusDist;
     uniform int samples;
+    uniform int setNewColor;
     int sphereNumber;
     #define MAXSPHERENUM 100
     #define SPHERENUM 100

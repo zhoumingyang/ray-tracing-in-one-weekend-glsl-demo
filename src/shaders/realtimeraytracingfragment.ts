@@ -39,7 +39,7 @@ export const realTimeRayTracingFragmentSource: string =
         hitRecord tmpRec;
         float attenuation = 1.0;
         vec3 totalAttenuation = vec3(1.0, 1.0, 1.0);
-        for(int bounces = 0; bounces < 6; bounces++) {
+        for(int bounces = 0; bounces < 4; bounces++) {
             if(hitSpheres(r, tmpRec)) {
                 vec3 tmpAttenuation;
                 Ray outRay;
@@ -91,7 +91,9 @@ export const realTimeRayTracingFragmentSource: string =
         if (samples - 1 > 0) {
             preSceneColor.rgb = preSceneColor.rgb * float(samples - 1);
         }
-        curSceneColor += preSceneColor;
+        if (setNewColor == 0) {
+            curSceneColor += preSceneColor;
+        }
         vec4 finalColor = vec4(curSceneColor.rgb / float(samples), 1.0);
         finalColor = vec4(sqrt(finalColor.r), sqrt(finalColor.g), sqrt(finalColor.b), 1.0);
         fragColor = finalColor;

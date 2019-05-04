@@ -28,6 +28,7 @@ export class Shader {
         if (!tmpUniformValue || !this.uniformVar || !this.uniformInfoMap) {
             return;
         }
+        this.uniformValue = tmpUniformValue;
         this.uniformVar.forEach((type, name) => {
             const pos: WebGLUniformLocation = this.gl.getUniformLocation(this.program, name);
             const value = tmpUniformValue.get(name);

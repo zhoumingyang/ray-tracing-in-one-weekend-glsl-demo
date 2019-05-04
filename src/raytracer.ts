@@ -12,8 +12,6 @@ import { renderVertexSource } from './shaders/rendervertex';
 import { renderFragmentSource } from './shaders/renderfragment';
 import { realTimeRayTracingVertexSource } from './shaders/realtimeraytracingvertex';
 import { realTimeRayTracingFragmentSource } from './shaders/realtimeraytracingfragment';
-import { bvhRayTraceVertexSource } from './shaders/bvhraytracevertex';
-import { bvhRayTraceFragmentSource } from './shaders/bvhraytracefragment';
 
 export class RayTracer {
     public gl: WebGLRenderingContext;
@@ -27,6 +25,7 @@ export class RayTracer {
     public traceUniformValue: Map<string, any>;
     public camera: Camera;
     public samples: number;
+    public setNewColor: boolean;
     public sphereCount: number;
     public spheres: Sphere[];
     private vertices: number[];
@@ -44,12 +43,14 @@ export class RayTracer {
         this.spheres = [];
         this.sphereCount = 0;
         this.traceUniformValue = new Map();
+        this.setNewColor = false;
     }
 
     public init() {
         this.traceUniformValue.set('clientWidth', globals.CANVAS_WIDTH);
         this.traceUniformValue.set('clientHeight', globals.CANVAS_HEIGHT);
         this.traceUniformValue.set('samples', this.samples);
+        this.traceUniformValue.set('setNewColor', this.setNewColor);
         this.initCamera();
         this.initBufferData();
         this.frameBuffer = this.gl.createFramebuffer();
@@ -89,7 +90,6 @@ export class RayTracer {
                 hitSpheres.push(sphere);
             }
         });
-        console.log(hitSpheres)
     }
 
     public initCamera() {
@@ -166,12 +166,12 @@ export class RayTracer {
         this.spheres[i++] = new Sphere(new vec3(0.0, 1.0, 0.0), 1.0, new Material(texture, 0.0, 1.5, globals.MATERIALTYPE.DIELECTRIC));
         this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
 
-        texture = new Texture(new vec3(0.4, 0.2, 0.1), black, black, globals.TEXTURETYPE.CONSTANT_TEXTURE);
-        this.spheres[i++] = new Sphere(new vec3(-4.0, 1.0, 0.0), 1.0, new Material(texture, 0.0, 1.0, globals.MATERIALTYPE.LAMBERTIAN));
-        this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
-
         texture = new Texture(white, black, black, globals.TEXTURETYPE.CONSTANT_TEXTURE);
         this.spheres[i++] = new Sphere(new vec3(4.0, 1.0, 0.0), 1.0, new Material(texture, 0.0, 1.0, globals.MATERIALTYPE.METAL));
+        this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
+
+        texture = new Texture(new vec3(0.4, 0.2, 0.1), black, black, globals.TEXTURETYPE.CONSTANT_TEXTURE);
+        this.spheres[i++] = new Sphere(new vec3(-4.0, 1.0, 0.0), 1.0, new Material(texture, 0.0, 1.0, globals.MATERIALTYPE.LAMBERTIAN));
         this.spheres[i - 1].setUniformValue(this.traceUniformValue, i - 1);
 
         this.sphereCount = i;
@@ -196,6 +196,10 @@ export class RayTracer {
         //do ray tracing render
         this.traceShader.startProgram();
         this.traceShader.updateUniformValue('samples', this.samples);
+        if (this.setNewColor) {
+            this.traceShader.updateUniformValue('setNewColor', this.setNewColor);
+            this.setNewColor = false;
+        }
         this.traceShader.setUniform();
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures[0]);
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
